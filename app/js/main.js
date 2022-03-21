@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
-const rows = 6;
-const columns = 6;
+const rows = 3;
+const columns = 3;
 const circles = [];
 let rowsDistanse = {};
 const canvas = document.querySelector('canvas');
@@ -37,11 +37,9 @@ const colors = [{
 }];
 
 const types = [
-    0, 0, 1, 0, 0,
-    0, 3, 3, 2, 1,
-    3, 3, 2, 1, 2,
-    0, 2, 1, 0, 1,
-    0, 0, 1, 0, 0,
+    0, 0, 0,
+    0, 3, 3,
+    2, 2, 2,
 
 ];
 
@@ -95,10 +93,10 @@ const createCircles = () => {
             circle.x = (2 * circle.radius) * j + circle.radius;
             circle.y = (2 * circle.radius) * i + circle.radius;
             circle.startPosition = circle.y;
-            circle.fillColor = colors[randomNumber].base;
-            circle.hoverColor = colors[randomNumber].hover;
-            circle.type = randomNumber;
-            circle.colorText = colors[randomNumber].color;
+            circle.fillColor = colors[types[i * columns + j]].base;
+            circle.hoverColor = colors[types[i * columns + j]].hover;
+            circle.type = types[i * columns + j];
+            circle.colorText = colors[types[i * columns + j]].color;
             circle.index = i * columns + j;
             circle.row = i;
             circle.column = j;
@@ -190,6 +188,12 @@ const makeGroups = () => {
     }
 };
 
+const swapItems = (index, prevElementInColumnIndex) => {
+    tempItem = circles[index];
+    circles[index] = circles[prevElementInColumnIndex];
+    circles[prevElementInColumnIndex] = tempItem;
+};
+
 const selectItem = (e) => {
     const coords = {
         x: e.offsetX,
@@ -201,10 +205,10 @@ const selectItem = (e) => {
             if (item.x - item.radius <= coords.x && item.x + item.radius >= coords.x
             && item.y - item.radius <= coords.y && item.y + item.radius >= coords.y) {
                 rowsDistanse = {};
+                makeGroups();
 
                 for (let i = 0; i < circles.length; i += 1) {
                     const currentElement = circles[i];
-                    const prevElementInColumn = circles[i - columns];
 
                     if (currentElement && currentElement.group !== undefined && currentElement.group === item.group) {
                         if (!rowsDistanse[currentElement.column]) {
@@ -216,37 +220,71 @@ const selectItem = (e) => {
                             rowsDistanse[currentElement.column].distanse += (currentElement.radius * 2);
                         }
 
-                        circles[i] = null;
+                        if (i - columns !== -1) {
+                            const destroyedItemRow = rowsDistanse[currentElement.column].row;
 
-                        if (prevElementInColumn) {
-                            const currentTemp = circles[i];
-                            const prevTemp = prevElementInColumn;
-                            const prevY = prevElementInColumn.y;
-
-                            console.log(prevY);
-
-                            // circles[i] = prevElementInColumn;
-                            // circles[i - columns] = currentTemp;
+                            for (let k = 0; k < destroyedItemRow; k += 1) {
+                                swapItems(i, i - columns);
+                                i -= columns;
+                            }
                         }
+
+                        circles[i] = null;
                     }
                 }
             }
         }
     });
-    console.log(rowsDistanse);
 
-    // makeGroups();
+    for (let x = 0; x < rows; x += 1) {
+        for (let y = 0; y < columns; y += 1) {
+            if (circles[x * columns + y] !== null) {
+                delete circles[x * columns + y].group;
+                circles[x * columns + y].text = '';
+                circles[x * columns + y].checked = false;
+                // circles[x * columns + y].row = x;
+            } else {
+                console.log(null);
+            }
+        }
+    }
 };
 
 const bindEvents = () => {
     canvas.addEventListener('click', selectItem);
 };
 
+let animation = false;
+
 const move = (element) => {
     if (element) {
         if (typeof rowsDistanse !== 'undefined' && rowsDistanse[element.column] && rowsDistanse[element.column].row > element.row) {
+            console.log(element.y < element.startPosition + rowsDistanse[element.column].distanse);
+
             if (element.y < element.startPosition + rowsDistanse[element.column].distanse) {
+                animation = true;
                 element.y += 5;
+            } else {
+                // element.y = element.startPosition + rowsDistanse[element.column].distanse;
+
+                if (animation) {
+                    console.log('stop');
+                    animation = false;
+
+                    for (let x = 0; x < rows; x += 1) {
+                        for (let y = 0; y < columns; y += 1) {
+                            if (circles[x * columns + y] !== null) {
+                                delete circles[x * columns + y].group;
+                                circles[x * columns + y].text = '';
+                                circles[x * columns + y].checked = false;
+                                circles[x * columns + y].row = x;
+                                console.log('row is changed!');
+                            } else {
+                                console.log(null);
+                            }
+                        }
+                    }
+                }
             }
         } else {
             element.startPosition = element.y;
