@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
-const rows = 3;
-const columns = 3;
+const rows = 4;
+const columns = 4;
 const circles = [];
 let rowsDistanse = {};
 const canvas = document.querySelector('canvas');
@@ -37,9 +37,10 @@ const colors = [{
 }];
 
 const types = [
-    0, 0, 0,
-    0, 3, 3,
-    2, 2, 2,
+    0, 0, 0, 0,
+    1, 0, 2, 0,
+    1, 0, 0, 0,
+    0, 0, 0, 3,
 
 ];
 
@@ -139,7 +140,7 @@ const makeGroups = () => {
                 // Тут формируем новые вертикальные группы (текущий элемент + элемент из следующего снизу ряда)
 
                 if (nextElementInColumn && circle && nextElementInColumn.type === circle.type
-                && !circle.checked && !nextElementInColumn.checked) {
+                && !circle.checked) {
                     circle.checked = true;
                     circle.group = groupsCounter;
                     circle.text = circle.group;
@@ -188,7 +189,7 @@ const makeGroups = () => {
     }
 };
 
-const swapItems = (index, prevElementInColumnIndex) => {
+const swapItemsVertical = (index, prevElementInColumnIndex) => {
     tempItem = circles[index];
     circles[index] = circles[prevElementInColumnIndex];
     circles[prevElementInColumnIndex] = tempItem;
@@ -204,29 +205,67 @@ const selectItem = (e) => {
         if (item) {
             if (item.x - item.radius <= coords.x && item.x + item.radius >= coords.x
             && item.y - item.radius <= coords.y && item.y + item.radius >= coords.y) {
+                for (let x = 0; x < rows; x += 1) {
+                    for (let y = 0; y < columns; y += 1) {
+                        if (circles[x * columns + y] !== null) {
+                            delete circles[x * columns + y].group;
+                            circles[x * columns + y].text = '';
+                            circles[x * columns + y].checked = false;
+                            circles[x * columns + y].row = x;
+                            circles[x * columns + y].startPosition = circles[x * columns + y].y;
+                        }
+                    }
+                }
+
                 rowsDistanse = {};
                 makeGroups();
+
+                let isDetected = false;
 
                 for (let i = 0; i < circles.length; i += 1) {
                     const currentElement = circles[i];
 
                     if (currentElement && currentElement.group !== undefined && currentElement.group === item.group) {
+                        // console.log(circles[i + columns].type === circles[i].type && rowsDistanse[currentElement]);
+
                         if (!rowsDistanse[currentElement.column]) {
                             rowsDistanse[currentElement.column] = {
                                 row: currentElement.row,
                                 distanse: (currentElement.radius * 2),
                             };
+                        } else if (circles[i - columns] && circles[i - columns].type !== currentElement.type && rowsDistanse[currentElement.column]
+                            && !isDetected) {
+                            console.log('Color', circles[i].colorText);
+                            console.log('column', circles[i].column);
+                            console.log('row', circles[i].row);
+
+                            rowsDistanse[currentElement.column].distanse = (currentElement.radius * 2) * circles[i].row;
+                            rowsDistanse[currentElement.column].row = currentElement.row;
+                            isDetected = true;
+                        } else if (circles[i - columns] && circles[i - columns].type !== currentElement.type && rowsDistanse[currentElement.column]
+                            && !isDetected) {
+                            console.log('Color', circles[i].colorText);
+                            console.log('column', circles[i].column);
+                            console.log('row', circles[i].row);
+
+                            rowsDistanse[currentElement.column].distanse = (currentElement.radius * 2) * circles[i].row;
+                            rowsDistanse[currentElement.column].row = currentElement.row;
+                            isDetected = true;
                         } else {
+                            console.log(4);
                             rowsDistanse[currentElement.column].distanse += (currentElement.radius * 2);
+                            rowsDistanse[currentElement.column].row = currentElement.row;
                         }
 
                         if (i - columns !== -1) {
                             const destroyedItemRow = rowsDistanse[currentElement.column].row;
 
                             for (let k = 0; k < destroyedItemRow; k += 1) {
-                                swapItems(i, i - columns);
+                                swapItemsVertical(i, i - columns);
                                 i -= columns;
                             }
+
+                            // i += destroyedItemRow * columns;
                         }
 
                         circles[i] = null;
@@ -254,40 +293,13 @@ const bindEvents = () => {
     canvas.addEventListener('click', selectItem);
 };
 
-let animation = false;
-
 const move = (element) => {
     if (element) {
-        if (typeof rowsDistanse !== 'undefined' && rowsDistanse[element.column] && rowsDistanse[element.column].row > element.row) {
-            console.log(element.y < element.startPosition + rowsDistanse[element.column].distanse);
-
+        if (typeof rowsDistanse !== 'undefined' && rowsDistanse[element.column]
+        && rowsDistanse[element.column].row > element.row) {
             if (element.y < element.startPosition + rowsDistanse[element.column].distanse) {
-                animation = true;
                 element.y += 5;
-            } else {
-                // element.y = element.startPosition + rowsDistanse[element.column].distanse;
-
-                if (animation) {
-                    console.log('stop');
-                    animation = false;
-
-                    for (let x = 0; x < rows; x += 1) {
-                        for (let y = 0; y < columns; y += 1) {
-                            if (circles[x * columns + y] !== null) {
-                                delete circles[x * columns + y].group;
-                                circles[x * columns + y].text = '';
-                                circles[x * columns + y].checked = false;
-                                circles[x * columns + y].row = x;
-                                console.log('row is changed!');
-                            } else {
-                                console.log(null);
-                            }
-                        }
-                    }
-                }
             }
-        } else {
-            element.startPosition = element.y;
         }
     }
 };
